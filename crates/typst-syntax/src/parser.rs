@@ -1547,19 +1547,25 @@ struct Token {
     /// The number of preceding trivia before this token.
     n_trivia: usize,
     /// Whether this token's preceding trivia contained a newline.
-    ///
-    /// TODO: Maybe add a `NewlineInfo` struct and use an `Option<NewlineInfo>`
-    /// here. Thoughts?
-    had_newline: bool,
-    /// If we had a newline, whether any of our newlines were paragraph breaks.
-    parbreak: bool, // should maybe be an enum at this point?
-    /// The column of our token in its line (only `Some` in Markup).
-    column: Option<usize>,
+    newline: Option<Newline>,
     /// The index into `text` of the start of our current token (the end is
     /// stored as the lexer's cursor).
     start: usize,
     /// The index into `text` of the end of the previous token.
     prev_end: usize,
+}
+
+/// Information about a newline if present (currently only relevant in Markup).
+#[derive(Debug, Clone, Copy)]
+struct Newline {
+    /// The column of our token in its line.
+    ///
+    /// Note that this is actually the column of the first non-whitespace
+    /// `SyntaxKind` in the line, so `\n  /**/- list` has column 2 (not 6)
+    /// because the block comment is the first non-space kind.
+    column: Option<usize>,
+    /// Whether any of our newlines were paragraph breaks.
+    parbreak: bool,
 }
 
 /// How to proceed with parsing when at a newline.
@@ -1581,7 +1587,7 @@ enum AtNewline {
 
 impl AtNewline {
     /// Whether to stop at a newline or continue based on the current context.
-    fn stop(self, kind: SyntaxKind, had_parbreak: bool, column: Option<usize>) -> bool {
+    fn stop_at(self, Newline { column, parbreak }: Newline, kind: SyntaxKind) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match self {
             AtNewline::Continue => false,
@@ -1590,7 +1596,7 @@ impl AtNewline {
                 SyntaxKind::Else | SyntaxKind::Dot => false,
                 _ => true,
             },
-            AtNewline::StopParBreak => had_parbreak,
+            AtNewline::StopParBreak => parbreak,
             AtNewline::RequireColumn(min_col) => match column {
                 Some(column) => column <= min_col,
                 None => false, // Don't stop if we had no column.
@@ -1686,13 +1692,17 @@ impl<'s> Parser<'s> {
 
     /// Whether `token` had a newline among any of its preceding trivia.
     fn had_newline(&self) -> bool {
-        self.token.had_newline
+        self.token.newline.is_some()
     }
 
     /// The number of characters until the most recent newline from the current
     /// token, or 0 if it did not follow a newline.
+    ///
+    /// Note that this is actually the column of the first non-whitespace
+    /// `SyntaxKind` in the line, so `\n  /**/- list` has column 2 (not 6)
+    /// because the block comment is the first non-space kind.
     fn current_column(&self) -> usize {
-        self.token.column.unwrap_or(0)
+        self.token.newline.map_or(0, |newline| newline.column.unwrap_or(0))
     }
 
     /// The current token's text.
@@ -1826,13 +1836,15 @@ impl<'s> Parser<'s> {
         self.nl_mode = mode;
         func(self);
         self.nl_mode = previous;
-        if mode != previous && self.token.had_newline {
-            // Restore our actual token's kind or insert a fake end.
-            let actual_kind = self.token.node.kind();
-            if self.nl_mode.stop(actual_kind, self.token.parbreak, self.token.column) {
-                self.token.kind = SyntaxKind::End;
-            } else {
-                self.token.kind = actual_kind;
+        if let Some(newline) = self.token.newline {
+            if mode != previous {
+                // Restore our actual token's kind or insert a fake end.
+                let actual_kind = self.token.node.kind();
+                if self.nl_mode.stop_at(newline, actual_kind) {
+                    self.token.kind = SyntaxKind::End;
+                } else {
+                    self.token.kind = actual_kind;
+                }
             }
         }
     }
@@ -1848,16 +1860,15 @@ impl<'s> Parser<'s> {
         let (mut kind, mut node) = lexer.next();
         let mut n_trivia = 0;
         let mut had_newline = false;
-        let mut parbreak = false;
-        let mut column = None;
+        let mut newline = Newline { column: None, parbreak: false };
 
         while kind.is_trivia() {
             if lexer.newline() {
                 // Newlines are always trivia.
                 had_newline = true;
-                parbreak |= kind == SyntaxKind::Parbreak;
+                newline.parbreak |= kind == SyntaxKind::Parbreak;
                 if lexer.mode() == LexMode::Markup {
-                    column = Some(lexer.column());
+                    newline.column = Some(lexer.column());
                 }
             }
             n_trivia += 1;
@@ -1865,22 +1876,14 @@ impl<'s> Parser<'s> {
             start = lexer.cursor();
             (kind, node) = lexer.next();
         }
-        if had_newline && nl_mode.stop(kind, parbreak, column) {
+        if had_newline && nl_mode.stop_at(newline, kind) {
             // Insert a temporary `SyntaxKind::End` to halt the parser.
             // The actual kind will be restored from `node` later.
             kind = SyntaxKind::End;
         }
 
-        Token {
-            kind,
-            node,
-            n_trivia,
-            had_newline,
-            parbreak,
-            column,
-            start,
-            prev_end,
-        }
+        let newline = had_newline.then_some(newline);
+        Token { kind, node, n_trivia, newline, start, prev_end }
     }
 }
 
