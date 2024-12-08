@@ -108,3 +108,16 @@
 --- number-invalid-suffix ---
 // Error: 2-4 invalid number suffix: u
 #1u
+
+
+--- int-syntax-edge-cases ---
+// Error: 2-8 invalid number suffix: hello
+#1hello
+// Error: 2-8 invalid number suffix: hello
+
+
+// TODO: more tests with odd bases + suffixes (also with multiple percent signs)
+
+#123.456e+
+
+
