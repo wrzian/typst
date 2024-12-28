@@ -177,126 +177,65 @@ impl<'a> Markup<'a> {
 /// An expression in markup, math or code.
 #[derive(Debug, Copy, Clone, Hash)]
 pub enum Expr<'a> {
-    /// Plain text without markup.
     Text(Text<'a>),
-    /// Whitespace in markup or math. Has at most one newline in markup, as more
-    /// indicate a paragraph break.
     Space(Space<'a>),
-    /// A forced line break: `\`.
     Linebreak(Linebreak<'a>),
-    /// A paragraph break, indicated by one or multiple blank lines.
     Parbreak(Parbreak<'a>),
-    /// An escape sequence: `\#`, `\u{1F5FA}`.
     Escape(Escape<'a>),
-    /// A shorthand for a unicode codepoint. For example, `~` for non-breaking
-    /// space or `-?` for a soft hyphen.
     Shorthand(Shorthand<'a>),
-    /// A smart quote: `'` or `"`.
     SmartQuote(SmartQuote<'a>),
-    /// Strong content: `*Strong*`.
     Strong(Strong<'a>),
-    /// Emphasized content: `_Emphasized_`.
     Emph(Emph<'a>),
-    /// Raw text with optional syntax highlighting: `` `...` ``.
     Raw(Raw<'a>),
-    /// A hyperlink: `https://typst.org`.
     Link(Link<'a>),
-    /// A label: `<intro>`.
     Label(Label<'a>),
-    /// A reference: `@target`, `@target[..]`.
     Ref(Ref<'a>),
-    /// A section heading: `= Introduction`.
     Heading(Heading<'a>),
-    /// An item in a bullet list: `- ...`.
-    List(ListItem<'a>),
-    /// An item in an enumeration (numbered list): `+ ...` or `1. ...`.
-    Enum(EnumItem<'a>),
-    /// An item in a term list: `/ Term: Details`.
-    Term(TermItem<'a>),
-    /// A mathematical equation: `$x$`, `$ x^2 $`.
+    ListItem(ListItem<'a>),
+    EnumItem(EnumItem<'a>),
+    TermItem(TermItem<'a>),
     Equation(Equation<'a>),
-    /// The contents of a mathematical equation: `x^2 + 1`.
     Math(Math<'a>),
-    /// A lone text fragment in math: `x`, `25`, `3.1415`, `=`, `[`.
     MathText(MathText<'a>),
-    /// An identifier in math: `pi`.
     MathIdent(MathIdent<'a>),
-    /// A shorthand for a unicode codepoint in math: `a <= b`.
     MathShorthand(MathShorthand<'a>),
-    /// An alignment point in math: `&`.
     MathAlignPoint(MathAlignPoint<'a>),
-    /// Matched delimiters in math: `[x + y]`.
     MathDelimited(MathDelimited<'a>),
-    /// A base with optional attachments in math: `a_1^2`.
     MathAttach(MathAttach<'a>),
-    /// Grouped math primes
     MathPrimes(MathPrimes<'a>),
-    /// A fraction in math: `x/2`.
     MathFrac(MathFrac<'a>),
-    /// A root in math: `√x`, `∛x` or `∜x`.
     MathRoot(MathRoot<'a>),
-    /// An identifier: `left`.
     Ident(Ident<'a>),
-    /// The `none` literal.
     None(None<'a>),
-    /// The `auto` literal.
     Auto(Auto<'a>),
-    /// A boolean: `true`, `false`.
     Bool(Bool<'a>),
-    /// An integer: `120`.
     Int(Int<'a>),
-    /// A floating-point number: `1.2`, `10e-4`.
     Float(Float<'a>),
-    /// A numeric value with a unit: `12pt`, `3cm`, `2em`, `90deg`, `50%`.
     Numeric(Numeric<'a>),
-    /// A quoted string: `"..."`.
     Str(Str<'a>),
-    /// A code block: `{ let x = 1; x + 2 }`.
-    Code(CodeBlock<'a>),
-    /// A content block: `[*Hi* there!]`.
-    Content(ContentBlock<'a>),
-    /// A grouped expression: `(1 + 2)`.
+    CodeBlock(CodeBlock<'a>),
+    ContentBlock(ContentBlock<'a>),
     Parenthesized(Parenthesized<'a>),
-    /// An array: `(1, "hi", 12cm)`.
     Array(Array<'a>),
-    /// A dictionary: `(thickness: 3pt, dash: "solid")`.
     Dict(Dict<'a>),
-    /// A unary operation: `-x`.
     Unary(Unary<'a>),
-    /// A binary operation: `a + b`.
     Binary(Binary<'a>),
-    /// A field access: `properties.age`.
     FieldAccess(FieldAccess<'a>),
-    /// An invocation of a function or method: `f(x, y)`.
     FuncCall(FuncCall<'a>),
-    /// A closure: `(x, y) => z`.
     Closure(Closure<'a>),
-    /// A let binding: `let x = 1`.
-    Let(LetBinding<'a>),
-    /// A destructuring assignment: `(x, y) = (1, 2)`.
-    DestructAssign(DestructAssignment<'a>),
-    /// A set rule: `set text(...)`.
-    Set(SetRule<'a>),
-    /// A show rule: `show heading: it => emph(it.body)`.
-    Show(ShowRule<'a>),
-    /// A contextual expression: `context text.lang`.
+    LetBinding(LetBinding<'a>),
+    DestructAssignment(DestructAssignment<'a>),
+    SetRule(SetRule<'a>),
+    ShowRule(ShowRule<'a>),
     Contextual(Contextual<'a>),
-    /// An if-else conditional: `if x { y } else { z }`.
     Conditional(Conditional<'a>),
-    /// A while loop: `while x { y }`.
-    While(WhileLoop<'a>),
-    /// A for loop: `for x in y { z }`.
-    For(ForLoop<'a>),
-    /// A module import: `import "utils.typ": a, b, c`.
-    Import(ModuleImport<'a>),
-    /// A module include: `include "chapter1.typ"`.
-    Include(ModuleInclude<'a>),
-    /// A break from a loop: `break`.
-    Break(LoopBreak<'a>),
-    /// A continue in a loop: `continue`.
-    Continue(LoopContinue<'a>),
-    /// A return from a function: `return`, `return x + 1`.
-    Return(FuncReturn<'a>),
+    WhileLoop(WhileLoop<'a>),
+    ForLoop(ForLoop<'a>),
+    ModuleImport(ModuleImport<'a>),
+    ModuleInclude(ModuleInclude<'a>),
+    LoopBreak(LoopBreak<'a>),
+    LoopContinue(LoopContinue<'a>),
+    FuncReturn(FuncReturn<'a>),
 }
 
 impl<'a> Expr<'a> {
@@ -324,9 +263,9 @@ impl<'a> AstNode<'a> for Expr<'a> {
             SyntaxKind::Label => node.cast().map(Self::Label),
             SyntaxKind::Ref => node.cast().map(Self::Ref),
             SyntaxKind::Heading => node.cast().map(Self::Heading),
-            SyntaxKind::ListItem => node.cast().map(Self::List),
-            SyntaxKind::EnumItem => node.cast().map(Self::Enum),
-            SyntaxKind::TermItem => node.cast().map(Self::Term),
+            SyntaxKind::ListItem => node.cast().map(Self::ListItem),
+            SyntaxKind::EnumItem => node.cast().map(Self::EnumItem),
+            SyntaxKind::TermItem => node.cast().map(Self::TermItem),
             SyntaxKind::Equation => node.cast().map(Self::Equation),
             SyntaxKind::Math => node.cast().map(Self::Math),
             SyntaxKind::MathText => node.cast().map(Self::MathText),
@@ -346,8 +285,8 @@ impl<'a> AstNode<'a> for Expr<'a> {
             SyntaxKind::Float => node.cast().map(Self::Float),
             SyntaxKind::Numeric => node.cast().map(Self::Numeric),
             SyntaxKind::Str => node.cast().map(Self::Str),
-            SyntaxKind::CodeBlock => node.cast().map(Self::Code),
-            SyntaxKind::ContentBlock => node.cast().map(Self::Content),
+            SyntaxKind::CodeBlock => node.cast().map(Self::CodeBlock),
+            SyntaxKind::ContentBlock => node.cast().map(Self::ContentBlock),
             SyntaxKind::Parenthesized => node.cast().map(Self::Parenthesized),
             SyntaxKind::Array => node.cast().map(Self::Array),
             SyntaxKind::Dict => node.cast().map(Self::Dict),
@@ -356,19 +295,19 @@ impl<'a> AstNode<'a> for Expr<'a> {
             SyntaxKind::FieldAccess => node.cast().map(Self::FieldAccess),
             SyntaxKind::FuncCall => node.cast().map(Self::FuncCall),
             SyntaxKind::Closure => node.cast().map(Self::Closure),
-            SyntaxKind::LetBinding => node.cast().map(Self::Let),
-            SyntaxKind::DestructAssignment => node.cast().map(Self::DestructAssign),
-            SyntaxKind::SetRule => node.cast().map(Self::Set),
-            SyntaxKind::ShowRule => node.cast().map(Self::Show),
+            SyntaxKind::LetBinding => node.cast().map(Self::LetBinding),
+            SyntaxKind::DestructAssignment => node.cast().map(Self::DestructAssignment),
+            SyntaxKind::SetRule => node.cast().map(Self::SetRule),
+            SyntaxKind::ShowRule => node.cast().map(Self::ShowRule),
             SyntaxKind::Contextual => node.cast().map(Self::Contextual),
             SyntaxKind::Conditional => node.cast().map(Self::Conditional),
-            SyntaxKind::WhileLoop => node.cast().map(Self::While),
-            SyntaxKind::ForLoop => node.cast().map(Self::For),
-            SyntaxKind::ModuleImport => node.cast().map(Self::Import),
-            SyntaxKind::ModuleInclude => node.cast().map(Self::Include),
-            SyntaxKind::LoopBreak => node.cast().map(Self::Break),
-            SyntaxKind::LoopContinue => node.cast().map(Self::Continue),
-            SyntaxKind::FuncReturn => node.cast().map(Self::Return),
+            SyntaxKind::WhileLoop => node.cast().map(Self::WhileLoop),
+            SyntaxKind::ForLoop => node.cast().map(Self::ForLoop),
+            SyntaxKind::ModuleImport => node.cast().map(Self::ModuleImport),
+            SyntaxKind::ModuleInclude => node.cast().map(Self::ModuleInclude),
+            SyntaxKind::LoopBreak => node.cast().map(Self::LoopBreak),
+            SyntaxKind::LoopContinue => node.cast().map(Self::LoopContinue),
+            SyntaxKind::FuncReturn => node.cast().map(Self::FuncReturn),
             _ => Option::None,
         }
     }
@@ -389,9 +328,9 @@ impl<'a> AstNode<'a> for Expr<'a> {
             Self::Label(v) => v.to_untyped(),
             Self::Ref(v) => v.to_untyped(),
             Self::Heading(v) => v.to_untyped(),
-            Self::List(v) => v.to_untyped(),
-            Self::Enum(v) => v.to_untyped(),
-            Self::Term(v) => v.to_untyped(),
+            Self::ListItem(v) => v.to_untyped(),
+            Self::EnumItem(v) => v.to_untyped(),
+            Self::TermItem(v) => v.to_untyped(),
             Self::Equation(v) => v.to_untyped(),
             Self::Math(v) => v.to_untyped(),
             Self::MathText(v) => v.to_untyped(),
@@ -411,8 +350,8 @@ impl<'a> AstNode<'a> for Expr<'a> {
             Self::Float(v) => v.to_untyped(),
             Self::Numeric(v) => v.to_untyped(),
             Self::Str(v) => v.to_untyped(),
-            Self::Code(v) => v.to_untyped(),
-            Self::Content(v) => v.to_untyped(),
+            Self::CodeBlock(v) => v.to_untyped(),
+            Self::ContentBlock(v) => v.to_untyped(),
             Self::Array(v) => v.to_untyped(),
             Self::Dict(v) => v.to_untyped(),
             Self::Parenthesized(v) => v.to_untyped(),
@@ -421,19 +360,19 @@ impl<'a> AstNode<'a> for Expr<'a> {
             Self::FieldAccess(v) => v.to_untyped(),
             Self::FuncCall(v) => v.to_untyped(),
             Self::Closure(v) => v.to_untyped(),
-            Self::Let(v) => v.to_untyped(),
-            Self::DestructAssign(v) => v.to_untyped(),
-            Self::Set(v) => v.to_untyped(),
-            Self::Show(v) => v.to_untyped(),
+            Self::LetBinding(v) => v.to_untyped(),
+            Self::DestructAssignment(v) => v.to_untyped(),
+            Self::SetRule(v) => v.to_untyped(),
+            Self::ShowRule(v) => v.to_untyped(),
             Self::Contextual(v) => v.to_untyped(),
             Self::Conditional(v) => v.to_untyped(),
-            Self::While(v) => v.to_untyped(),
-            Self::For(v) => v.to_untyped(),
-            Self::Import(v) => v.to_untyped(),
-            Self::Include(v) => v.to_untyped(),
-            Self::Break(v) => v.to_untyped(),
-            Self::Continue(v) => v.to_untyped(),
-            Self::Return(v) => v.to_untyped(),
+            Self::WhileLoop(v) => v.to_untyped(),
+            Self::ForLoop(v) => v.to_untyped(),
+            Self::ModuleImport(v) => v.to_untyped(),
+            Self::ModuleInclude(v) => v.to_untyped(),
+            Self::LoopBreak(v) => v.to_untyped(),
+            Self::LoopContinue(v) => v.to_untyped(),
+            Self::FuncReturn(v) => v.to_untyped(),
         }
     }
 }
@@ -451,25 +390,25 @@ impl Expr<'_> {
                 | Self::Float(_)
                 | Self::Numeric(_)
                 | Self::Str(_)
-                | Self::Code(_)
-                | Self::Content(_)
+                | Self::CodeBlock(_)
+                | Self::ContentBlock(_)
                 | Self::Array(_)
                 | Self::Dict(_)
                 | Self::Parenthesized(_)
                 | Self::FieldAccess(_)
                 | Self::FuncCall(_)
-                | Self::Let(_)
-                | Self::Set(_)
-                | Self::Show(_)
+                | Self::LetBinding(_)
+                | Self::SetRule(_)
+                | Self::ShowRule(_)
                 | Self::Contextual(_)
                 | Self::Conditional(_)
-                | Self::While(_)
-                | Self::For(_)
-                | Self::Import(_)
-                | Self::Include(_)
-                | Self::Break(_)
-                | Self::Continue(_)
-                | Self::Return(_)
+                | Self::WhileLoop(_)
+                | Self::ForLoop(_)
+                | Self::ModuleImport(_)
+                | Self::ModuleInclude(_)
+                | Self::LoopBreak(_)
+                | Self::LoopContinue(_)
+                | Self::FuncReturn(_)
         )
     }
 
