@@ -76,8 +76,8 @@
 #(4.5em + 6in).inches()
 
 --- issue-5519-length-base ---
-// Error: 2-9 invalid base-2 prefix
-// Hint: 2-9 numbers with a unit cannot have a base prefix
+// Error: 2-9 binary numbers cannot have a suffix
+// Hint: 2-9 try using a decimal number: 4pt
 #0b100pt
 
 --- number-syntax-edge-cases ---
@@ -92,8 +92,9 @@
 #1.2E+0%
 #1.2e-0%
 #0.0e0deg
-#5in%
 #0.%
+// Error: 2-6 invalid number suffix: in%
+#5in%
 // Error: 2-8 invalid number suffix: hello
 #1hello
 // Error: 2-7 invalid number suffix: infr

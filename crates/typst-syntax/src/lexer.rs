@@ -745,7 +745,7 @@ impl Lexer<'_> {
 }
 
 /// Code.
-impl Lexer<'_> {
+impl<'s> Lexer<'s> {
     fn code(&mut self, start: usize, c: char) -> SyntaxKind {
         match c {
             '<' if self.s.at(is_id_continue) => self.label(),
@@ -807,28 +807,26 @@ impl Lexer<'_> {
         }
     }
 
-    fn number(&mut self, mut start: usize, c: char) -> SyntaxKind {
-        // Handle alternative integer bases.
-        let mut base = 10;
-        if c == '0' {
-            if self.s.eat_if('b') {
-                base = 2;
-            } else if self.s.eat_if('o') {
-                base = 8;
-            } else if self.s.eat_if('x') {
-                base = 16;
-            }
-            if base != 10 {
-                start = self.s.cursor();
-            }
-        }
-
-        // Read the first part (integer or fractional depending on `first`).
-        self.s.eat_while(if base == 16 {
-            char::is_ascii_alphanumeric
-        } else {
-            char::is_ascii_digit
-        });
+    /// Lex a normal number, either an integer or float with an optional suffix.
+    ///
+    /// This function implements the following regular-expression:
+    /// - `SyntaxKind::Int`: `[0-9]+`
+    /// - `SyntaxKind::Float`:
+    /// `([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE][+-]?[0-9]+)?` -
+    /// `SyntaxKind::Numeric`: `(Int|Float)[%a-zA-Z0-9]+`
+    ///
+    /// Suffixes have many ways to be invalid, but the only invalid case for a
+    /// normal number is a float where the exponent doesn't have a following
+    /// digit.
+    fn number(&mut self, start: usize, c: char) -> SyntaxKind {
+        // Read the initial digits.
+        match c {
+            '0' if self.s.eat_if('b') => return self.number_nonstandard_base(2),
+            '0' if self.s.eat_if('o') => return self.number_nonstandard_base(8),
+            '0' if self.s.eat_if('x') => return self.number_nonstandard_base(16),
+            _ => self.s.eat_while(char::is_ascii_digit),
+        };
+        let mut is_float = c == '.';
 
         // Read the fractional part if not already done.
         // Make sure not to confuse a range for the decimal separator.
@@ -836,57 +834,109 @@ impl Lexer<'_> {
             && !self.s.at("..")
             && !self.s.scout(1).is_some_and(is_id_start)
             && self.s.eat_if('.')
-            && base == 10
         {
+            is_float = true;
             self.s.eat_while(char::is_ascii_digit);
         }
 
         // Read the exponent.
-        if !self.s.at("em") && self.s.eat_if(['e', 'E']) && base == 10 {
+        if !self.s.at("em") && self.s.eat_if(['e', 'E']) {
+            is_float = true;
             self.s.eat_if(['+', '-']);
             self.s.eat_while(char::is_ascii_digit);
         }
 
-        // Read the suffix.
-        let suffix_start = self.s.cursor();
-        if !self.s.eat_if('%') {
-            self.s.eat_while(char::is_ascii_alphanumeric);
-        }
+        let number = self.s.from(start);
+        let maybe_suffix = self.maybe_numeric_suffix();
 
-        let number = self.s.get(start..suffix_start);
-        let suffix = self.s.from(suffix_start);
-
-        let kind = if i64::from_str_radix(number, base).is_ok() {
-            SyntaxKind::Int
-        } else if base == 10 && number.parse::<f64>().is_ok() {
+        if is_float && number.parse::<f64>().is_err() {
+            self.error(eco_format!("invalid number: {number}"))
+        } else if let Some(suffix_result) = maybe_suffix {
+            match suffix_result {
+                Ok(_suffix) => SyntaxKind::Numeric,
+                Err(message) => self.error(message),
+            }
+        } else if is_float {
             SyntaxKind::Float
         } else {
-            return self.error(match base {
-                2 => eco_format!("invalid binary number: 0b{}", number),
-                8 => eco_format!("invalid octal number: 0o{}", number),
-                16 => eco_format!("invalid hexadecimal number: 0x{}", number),
-                _ => eco_format!("invalid number: {}", number),
-            });
+            SyntaxKind::Int
+        }
+    }
+
+    /// Handle alternative integer bases: 2, 8, or 16.
+    fn number_nonstandard_base(&mut self, base: u32) -> SyntaxKind {
+        let number = if base == 16 {
+            self.s.eat_while(char::is_ascii_alphanumeric)
+        } else {
+            self.s.eat_while(char::is_ascii_digit)
         };
+        let num = i64::from_str_radix(number, base);
 
-        if suffix.is_empty() {
-            return kind;
+        // We still try to lex a numeric suffix (even though they're not allowed
+        // for nonstandard bases) so that we can give a better error message.
+        let maybe_suffix = self.maybe_numeric_suffix();
+
+        // Invalid :(
+        if num.is_err() || maybe_suffix.is_some() {
+            let (name, prefix) = match base {
+                2 => ("binary", "0b"),
+                8 => ("octal", "0o"),
+                16 => ("hexadecimal", "0x"),
+                _ => unreachable!(),
+            };
+            // Choose the base error message.
+            let err = if num.is_err() {
+                self.error(eco_format!("invalid {name} number: {prefix}{number}"))
+            } else {
+                self.error(eco_format!("{name} numbers cannot have a suffix"))
+            };
+            // Give a tailored hint based on whether the suffix was valid.
+            match (num, maybe_suffix) {
+                (Ok(n), Some(Ok(suffix))) => self.hint(eco_format!(
+                    "try using a decimal number: {n}{suffix}")),
+                (_, Some(Err(message))) => self.hint(message),
+                _ => {}
+            }
+            return err;
         }
 
-        if !matches!(
-            suffix,
-            "pt" | "mm" | "cm" | "in" | "deg" | "rad" | "em" | "fr" | "%"
-        ) {
-            return self.error(eco_format!("invalid number suffix: {}", suffix));
-        }
+        SyntaxKind::Int
+    }
 
-        if base != 10 {
-            let kind = self.error(eco_format!("invalid base-{base} prefix"));
-            self.hint("numbers with a unit cannot have a base prefix");
-            return kind;
+    /// Try to eat a numeric suffix: a series of alphanumeric characters or
+    /// percent sign(s) immediately following a number. Note that there aren't
+    /// any current suffixes that include numbers (or more than one percent),
+    /// but we eat the extra characters to consolidate errors regardless.
+    ///
+    /// Returns an optional result containing the lexed suffix string: if `Ok`,
+    /// the string is a valid numeric suffix for Typst.
+    fn maybe_numeric_suffix(&mut self) -> Option<Result<&'s str, EcoString>> {
+        fn is_suffix_char(c: char) -> bool {
+            c == '%' || c.is_alphanumeric()
         }
+        let suffix = self.s.eat_while(is_suffix_char);
+        match suffix {
+            "" => None,
+            "pt" | "mm" | "cm" | "in" | "deg" | "rad" | "em" | "fr" | "%" => {
+                Some(Ok(suffix))
+            }
+            _ => if let Some(len) = Self::numeric_suffix_bytes(suffix) {
+                let (valid, invalid) = suffix.split_at(len);
+                Some(Err(eco_format!(
+                    "invalid number suffix, try adding a space: {valid} {invalid}")))
+            } else {
+                Some(Err(eco_format!("invalid number suffix: {suffix}")))
+            },
+        }
+    }
 
-        SyntaxKind::Numeric
+    fn numeric_suffix_bytes(suffix: &str) -> Option<usize> {
+        match suffix {
+            "%" => Some(1),
+            "pt" | "mm" | "cm" | "in" | "em" | "fr" => Some(2),
+            "deg" | "rad" => Some(3),
+            _ => None,
+        }
     }
 
     fn string(&mut self) -> SyntaxKind {
