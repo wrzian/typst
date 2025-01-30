@@ -42,7 +42,7 @@ matches.
 
 And this is a safe interface because the Rust compiler only gives access to the
 methods after a [`Raw`] struct is created via [`AstNode::from_untyped`]. The
-[`node!`] macro implements `from_untyped` by checking the node's kind before
+`node!` macro implements `from_untyped` by checking the node's kind before
 constructing it, returning `Some()` only if the kind matches the desired struct.
 
 ## The AST is Lazy
