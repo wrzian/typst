@@ -70,13 +70,6 @@ Expressions also branch off into the remaining tree. You can view enums in this
 file as edges on a graph: areas where the tree has paths from one type to
 another (accessed through methods), then structs are the nodes of the graph,
 providing methods that return enums, etc. etc.
-
----
-
-So that's the Typst AST interface!
-
-Feel free to ask questions in the contributors chat if anything isn't fully
-clear, or give us suggestions on ways to improve these docs!
 */
 
 use std::num::NonZeroUsize;
