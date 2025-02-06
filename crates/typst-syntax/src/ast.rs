@@ -113,7 +113,8 @@ pub trait AstNode<'a>: Sized {
 /// of this AST node. For example, the [`Raw`] struct has methods for accessing
 /// its content by lines, its optional language tag, and whether the raw element
 /// is inline or a block. These methods are accessible only _after_ a
-/// `SyntaxNode` is coerced to the `Raw` struct type (via `from_untyped`).
+/// `SyntaxNode` is coerced to the `Raw` struct type (via `from_untyped`),
+/// guaranteeing their implementations will work with the expected structure.
 macro_rules! node {
     ($(#[$attr:meta])* struct $name:ident) => {
         // Create the struct as a wrapper around a `SyntaxNode` reference.
