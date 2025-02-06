@@ -1,7 +1,7 @@
 /*!
 # Abstract Syntax Tree Interface
 
-Typst's Abstract Syntax Tree (AST) is as a lazy, typed view over the untyped
+Typst's Abstract Syntax Tree (AST) is a lazy, typed view over the untyped
 Concrete Syntax Tree (CST) and is rooted in the [`Markup`] node.
 
 ## The AST is a View
@@ -16,7 +16,7 @@ tree traversal will recreate the text of the source file exactly.
 
 [`SyntaxNode`]s in the CST contain their [`SyntaxKind`], but don't themselves
 provide access to the semantic meaning of their contents. That semantic meaning
-is available throught the Abstract Syntax Tree by iterating over CST nodes and
+is available through the Abstract Syntax Tree by iterating over CST nodes and
 inspecting their contents. The format is prepared ahead-of-time by the parser so
 that this module can unpack the abstract meaning from the CST's structure.
 
@@ -112,7 +112,7 @@ pub trait AstNode<'a>: Sized {
 /// matches when converting, returning `Some` or `None` respectively.
 ///
 /// The generated struct is the basis for typed accessor methods for properties
-/// of this ast node. For example, the [`Raw`] struct has methods for accessing
+/// of this AST node. For example, the [`Raw`] struct has methods for accessing
 /// its content by lines, its optional language tag, and whether the raw element
 /// is inline or a block. These methods are accessible only _after_ a
 /// `SyntaxNode` is coerced to the `Raw` struct type (via `from_untyped`).
