@@ -123,6 +123,19 @@ impl SyntaxNode {
     fn cast_last_match<'a, T: AstNode<'a>>(&'a self) -> Option<T> {
         self.children().rev().find_map(Self::cast)
     }
+
+    /// Get the first child of AST type `T` or a placeholder if none.
+    ///
+    /// This and `get_last` are largely a convenience to avoid adding a `panic!`
+    /// without any unsafe code because the Parser can be hard to reason about,
+    /// but should contain this element.
+    fn get_first<'a, T: AstNode<'a> + Default>(&'a self) -> T {
+        self.cast_first_match().unwrap_or_default()
+    }
+
+    /// Get the last child of AST type `T` or a placeholder if none.
+    fn get_last<'a, T: AstNode<'a> + Default>(&'a self) -> T {
+        self.cast_last_match().unwrap_or_default()
     }
 }
 
@@ -558,7 +571,7 @@ node! {
 impl<'a> Strong<'a> {
     /// The contents of the strong node.
     pub fn body(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -570,7 +583,7 @@ node! {
 impl<'a> Emph<'a> {
     /// The contents of the emphasis node.
     pub fn body(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -677,7 +690,7 @@ node! {
 impl<'a> Heading<'a> {
     /// The contents of the heading.
     pub fn body(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The section depth (number of equals signs).
@@ -698,7 +711,7 @@ node! {
 impl<'a> ListItem<'a> {
     /// The contents of the list item.
     pub fn body(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -718,7 +731,7 @@ impl<'a> EnumItem<'a> {
 
     /// The contents of the list item.
     pub fn body(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -730,12 +743,12 @@ node! {
 impl<'a> TermItem<'a> {
     /// The term described by the item.
     pub fn term(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The description of the term.
     pub fn description(self) -> Markup<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -747,7 +760,7 @@ node! {
 impl<'a> Equation<'a> {
     /// The contained math.
     pub fn body(self) -> Math<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// Whether the equation should be displayed as a separate block.
@@ -897,17 +910,17 @@ node! {
 impl<'a> MathDelimited<'a> {
     /// The opening delimiter.
     pub fn open(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The contents, including the delimiters.
     pub fn body(self) -> Math<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The closing delimiter.
     pub fn close(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -919,7 +932,7 @@ node! {
 impl<'a> MathAttach<'a> {
     /// The base, to which things are attached.
     pub fn base(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The bottom attachment.
@@ -971,12 +984,12 @@ node! {
 impl<'a> MathFrac<'a> {
     /// The numerator.
     pub fn num(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The denominator.
     pub fn denom(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -998,7 +1011,7 @@ impl<'a> MathRoot<'a> {
 
     /// The radicand.
     pub fn radicand(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -1200,7 +1213,7 @@ node! {
 impl<'a> CodeBlock<'a> {
     /// The contained code.
     pub fn body(self) -> Code<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -1224,7 +1237,7 @@ node! {
 impl<'a> ContentBlock<'a> {
     /// The contained markup.
     pub fn body(self) -> Markup<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -1238,14 +1251,14 @@ impl<'a> Parenthesized<'a> {
     ///
     /// Should only be accessed if this is contained in an `Expr`.
     pub fn expr(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The wrapped pattern.
     ///
     /// Should only be accessed if this is contained in a `Pattern`.
     pub fn pattern(self) -> Pattern<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -1336,7 +1349,7 @@ node! {
 impl<'a> Named<'a> {
     /// The name: `thickness`.
     pub fn name(self) -> Ident<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The right-hand side of the pair: `3pt`.
@@ -1344,7 +1357,7 @@ impl<'a> Named<'a> {
     /// This should only be accessed if this `Named` is contained in a
     /// `DictItem`, `Arg`, or `Param`.
     pub fn expr(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 
     /// The right-hand side of the pair as a pattern.
@@ -1352,7 +1365,7 @@ impl<'a> Named<'a> {
     /// This should only be accessed if this `Named` is contained in a
     /// `Destructuring`.
     pub fn pattern(self) -> Pattern<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1364,7 +1377,7 @@ node! {
 impl<'a> Keyed<'a> {
     /// The key: `"spacy key"`.
     pub fn key(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The right-hand side of the pair: `true`.
@@ -1372,7 +1385,7 @@ impl<'a> Keyed<'a> {
     /// This should only be accessed if this `Keyed` is contained in a
     /// `DictItem`.
     pub fn expr(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1387,7 +1400,7 @@ impl<'a> Spread<'a> {
     /// This should only be accessed if this `Spread` is contained in an
     /// `ArrayItem`, `DictItem`, or `Arg`.
     pub fn expr(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The sink identifier, if present.
@@ -1423,7 +1436,7 @@ impl<'a> Unary<'a> {
 
     /// The expression to operate on: `x`.
     pub fn expr(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1491,12 +1504,12 @@ impl<'a> Binary<'a> {
 
     /// The left-hand side of the operation: `a`.
     pub fn lhs(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The right-hand side of the operation: `b`.
     pub fn rhs(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1662,12 +1675,12 @@ node! {
 impl<'a> FieldAccess<'a> {
     /// The expression to access the field on.
     pub fn target(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The name of the field.
     pub fn field(self) -> Ident<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1679,12 +1692,12 @@ node! {
 impl<'a> FuncCall<'a> {
     /// The function to call.
     pub fn callee(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The arguments to the function.
     pub fn args(self) -> Args<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1754,12 +1767,12 @@ impl<'a> Closure<'a> {
 
     /// The parameter bindings.
     pub fn params(self) -> Params<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The body of the closure.
     pub fn body(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1969,12 +1982,12 @@ node! {
 impl<'a> DestructAssignment<'a> {
     /// The pattern of the assignment.
     pub fn pattern(self) -> Pattern<'a> {
-        self.0.cast_first_match::<Pattern>().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The expression that is assigned.
     pub fn value(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -1986,12 +1999,12 @@ node! {
 impl<'a> SetRule<'a> {
     /// The function to set style properties for.
     pub fn target(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The style properties to set.
     pub fn args(self) -> Args<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 
     /// A condition under which the set rule applies.
@@ -2020,7 +2033,7 @@ impl<'a> ShowRule<'a> {
 
     /// The transformation recipe.
     pub fn transform(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -2032,7 +2045,7 @@ node! {
 impl<'a> Contextual<'a> {
     /// The expression which depends on the context.
     pub fn body(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 }
 
@@ -2044,7 +2057,7 @@ node! {
 impl<'a> Conditional<'a> {
     /// The condition which selects the body to evaluate.
     pub fn condition(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The expression to evaluate if the condition is true.
@@ -2070,12 +2083,12 @@ node! {
 impl<'a> WhileLoop<'a> {
     /// The condition which selects whether to evaluate the body.
     pub fn condition(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The expression to evaluate while the condition is true.
     pub fn body(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -2087,7 +2100,7 @@ node! {
 impl<'a> ForLoop<'a> {
     /// The pattern to assign to.
     pub fn pattern(self) -> Pattern<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The expression to iterate over.
@@ -2101,7 +2114,7 @@ impl<'a> ForLoop<'a> {
 
     /// The expression to evaluate for each iteration.
     pub fn body(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -2113,7 +2126,7 @@ node! {
 impl<'a> ModuleImport<'a> {
     /// The module or path from which the items should be imported.
     pub fn source(self) -> Expr<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The items to be imported.
@@ -2220,7 +2233,7 @@ impl<'a> ImportItemPath<'a> {
 
     /// The name of the imported item. This is the last segment in the path.
     pub fn name(self) -> Ident<'a> {
-        self.iter().last().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
@@ -2271,7 +2284,7 @@ node! {
 impl<'a> RenamedImportItem<'a> {
     /// The path to the imported item.
     pub fn path(self) -> ImportItemPath<'a> {
-        self.0.cast_first_match().unwrap_or_default()
+        self.0.get_first()
     }
 
     /// The original name of the imported item (`a` in `a as d` or `c.b.a as d`).
@@ -2297,7 +2310,7 @@ node! {
 impl<'a> ModuleInclude<'a> {
     /// The module or path from which the content should be included.
     pub fn source(self) -> Expr<'a> {
-        self.0.cast_last_match().unwrap_or_default()
+        self.0.get_last()
     }
 }
 
