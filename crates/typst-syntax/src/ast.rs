@@ -599,21 +599,19 @@ impl<'a> Raw<'a> {
     }
 
     /// An optional identifier specifying the language to syntax-highlight in.
+    ///
+    /// Only blocky raw elements can contain a language tag.
     pub fn lang(self) -> Option<RawLang<'a>> {
-        // Only blocky literals are supposed to contain a language.
-        let delim: RawDelim = self.0.cast_first_match()?;
-        if delim.0.len() < 3 {
-            return Option::None;
-        }
-
-        self.0.cast_first_match()
+        // Avoid looping over all children if not present.
+        // The language tag must be at `n == 1` because it must immediately
+        // follow the delimiter with no spaces/trivia if present.
+        self.0.children().nth(1).and_then(SyntaxNode::cast)
     }
 
     /// Whether the raw text should be displayed in a separate block.
     pub fn block(self) -> bool {
-        self.0
-            .cast_first_match()
-            .is_some_and(|delim: RawDelim| delim.0.len() >= 3)
+        let delim: RawDelim = self.0.get_first();
+        delim.0.len() >= 3
             && self.0.children().any(|e| {
                 e.kind() == SyntaxKind::RawTrimmed && e.text().chars().any(is_newline)
             })
@@ -1954,11 +1952,11 @@ impl<'a> LetBindingKind<'a> {
 impl<'a> LetBinding<'a> {
     /// The kind of the let binding.
     pub fn kind(self) -> LetBindingKind<'a> {
-        match self.0.cast_first_match::<Pattern>() {
-            Some(Pattern::Normal(Expr::Closure(closure))) => {
+        match self.0.get_first() {
+            Pattern::Normal(Expr::Closure(closure)) => {
                 LetBindingKind::Closure(closure.name().unwrap_or_default())
             }
-            pattern => LetBindingKind::Normal(pattern.unwrap_or_default()),
+            pattern => LetBindingKind::Normal(pattern),
         }
     }
 
@@ -2294,11 +2292,7 @@ impl<'a> RenamedImportItem<'a> {
 
     /// The new name of the imported item (`d` in `a as d`).
     pub fn new_name(self) -> Ident<'a> {
-        self.0
-            .children()
-            .filter_map(SyntaxNode::cast)
-            .last()
-            .unwrap_or_default()
+        self.0.get_last()
     }
 }
 
